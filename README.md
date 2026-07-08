@@ -31,7 +31,7 @@ The system has two independent components: an **eye** (ball detection) and a **b
 
 **Ball Detection —** 👀 
 
-Ball detection is split into two main subcomponents. I employed a "blob detector" system that answers the following central question: what's moving, and what's orange? We separately answer these two questions.
+Ball detection is split into two main subcomponents. The system employs a "blob detector" system that answers the following central question: what's moving, and what's orange? We separately answer these two questions.
 
 For motion detection, we crop a small rectangular region around the basket of interest and each frame we create an array of grayscale values for the pixels inside that region. If the grayscale value of a pixel differs by more than 25 to the benchmark (idle state, updating dynamically over time to adjust for lighting changes), we conclude that there is motion in that pixel. This alone is not able to identify the ball though; other things like the net swaying or lighting changes may cause differences in grayscale values.
 
