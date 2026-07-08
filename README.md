@@ -99,6 +99,8 @@ With this project I wanted to emphasize portability and ease of use. Many of the
 - Missed shots that do not reach a sufficient height threshold are occasionally not detected as shot attempts (ie. the "idle -> airborne" transition is not made). I am currently trying to fix this issue by finding the ideal height threshold for what counts as a "shot"
 - Airballs that graze the net without touching the rim are currently falsely flagged as makes.
 - Webport UI could be optimized to make calibration of the rectangle around the rim easier
+- Ball detection can be inconsistent if your ball is oddly colored (it's currently fine tuned to my specific gym setup coded to a precise coloring of my ball)
+- Sometimes detection fails after ending a session and restarting (not sure why but restarting the app usually fixes this issue)
 
 
 ## Tech ⚙️
