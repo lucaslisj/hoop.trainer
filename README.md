@@ -21,7 +21,7 @@ Visit this link on your phone, click the "live" icon near the top of the screen 
 
 ## What it does 🎥 
 
-Simply prop your phone on a tripod, place it on the basketball court, and start letting it fly! This web application will track your makes and misses in real time, utilizing simple computer vision techniques to track the ball and its trajectory.
+Simply prop your phone on a tripod, place it on the basketball court, and let it fly! This web application will track your makes and misses in real time, utilizing simple computer vision techniques to track the ball and its trajectory.
 
 ---
 
