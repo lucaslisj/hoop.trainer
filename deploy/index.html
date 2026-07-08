@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>HoopTrainer 🏀</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:     #0d0d0d;
+  --bg2:    #181818;
+  --bg3:    #242424;
+  --orange: #FF6B00;
+  --blue:   #4a9eff;
+  --green:  #3dba5c;
+  --red:    #e83b3b;
+  --text:   #FFFFFF;
+  --text2:  #888;
+  --border: #2e2e2e;
+  --r:      12px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+#app {
+  display: flex; flex-direction: column;
+  height: 100dvh; max-width: 480px;
+  margin: 0 auto; position: relative;
+}
+
+/* Header */
+header {
+  background: var(--bg); padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.logo-hoop { color: var(--orange); }
+
+/* Main */
+main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overflow-x: hidden; }
+.tab { display: none; padding: 18px 16px calc(24px + var(--safe-b)); }
+.tab.active { display: block; }
+
+/* Nav */
+nav {
+  background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; flex-shrink: 0; padding-bottom: var(--safe-b);
+}
+.nav-btn {
+  flex: 1; background: none; border: none; color: var(--text2);
+  padding: 10px 6px 8px; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.4px; cursor: pointer; transition: color 0.15s;
+}
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn.active { color: var(--orange); }
+
+/* Utility */
+.section-lbl {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text2); margin-bottom: 10px;
+}
+.card {
+  background: var(--bg2); border-radius: var(--r);
+  border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 14px;
+}
+select, input[type="text"], input[type="number"] {
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 11px 14px; font-size: 16px; width: 100%; font-family: inherit;
+}
+select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+input::placeholder { color: var(--text2); }
+select:focus, input:focus { outline: none; border-color: var(--orange); }
+
+.btn {
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+  cursor: pointer; padding: 13px 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: opacity .15s, transform .1s; font-family: inherit;
+  -webkit-user-select: none; user-select: none;
+}
+.btn:active { transform: scale(0.96); opacity: 0.82; }
+.btn-primary   { background: var(--orange); color: #fff; }
+.btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.btn-success   { background: var(--green); color: #fff; }
+.btn-danger    { background: var(--red);   color: #fff; }
+.btn-sm  { padding: 9px 14px; font-size: 14px; border-radius: 8px; }
+.btn-full { width: 100%; }
+
+.select-wrap { position: relative; }
+.select-wrap::after {
+  content: '▾'; position: absolute; right: 13px; top: 50%;
+  transform: translateY(-50%); color: var(--text2); pointer-events: none;
+}
+
+/* Rest pill buttons */
+.rest-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.rest-pill {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.rest-pill.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.rest-pill:active { transform: scale(0.95); }
+
+/* Timer */
+.timer-display { display: flex; flex-direction: column; align-items: center; padding: 8px 0 16px; }
+.timer-circle-wrap { position: relative; width: 210px; height: 210px; margin: 10px 0 18px; }
+.t-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.t-track    { fill: none; stroke: var(--bg3); stroke-width: 10; }
+.t-progress {
+  fill: none; stroke: var(--orange); stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 0.95s linear, stroke 0.4s;
+}
+.t-warn   { stroke: #f0a500; }
+.t-danger { stroke: var(--red); }
+.t-rest   { stroke: var(--blue); }
+.timer-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.timer-time  { font-size: 50px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.timer-phase { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.drill-name  { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; padding: 0 8px; }
+.drill-prog  { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 6px; }
+.timer-ctrls { display: flex; gap: 10px; width: 100%; justify-content: center; }
+.timer-ctrls .btn-primary { flex: 1; max-width: 180px; }
+
+/* Drill list */
+.drill-list { list-style: none; }
+.drill-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.drill-row:last-child { border-bottom: none; }
+.drill-num {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.drill-row.d-active { color: var(--orange); }
+.drill-row.d-active .drill-num { background: var(--orange); color: #fff; }
+.drill-row.d-done   { color: var(--text2); }
+.drill-row.d-done .drill-name-t { text-decoration: line-through; }
+.drill-row.d-rest   { color: var(--blue); }
+.drill-row.d-rest .drill-num { background: var(--blue); color: #fff; }
+.drill-name-t { flex: 1; font-size: 14px; font-weight: 500; }
+.drill-dur    { font-size: 12px; color: var(--text2); }
+
+/* Custom builder */
+.cb-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cb-row input[type="text"]   { flex: 1; }
+.cb-row input[type="number"] { width: 68px; }
+.cb-row .del-btn {
+  background: none; border: 1px solid var(--border); color: var(--red);
+  border-radius: 8px; padding: 9px 11px; cursor: pointer; font-size: 15px;
+  flex-shrink: 0; font-family: inherit;
+}
+
+/* Shot tracker */
+.totals {
+  display: flex; justify-content: space-around; text-align: center;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 8px; margin-bottom: 14px;
+}
+.stat-val { font-size: 30px; font-weight: 800; color: var(--orange); line-height: 1; }
+.stat-lbl { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 4px; }
+.zone-card { background: var(--bg2); border-radius: var(--r); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 12px; }
+.zone-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.zone-name-t { font-size: 15px; font-weight: 700; }
+.zone-fg   { font-size: 22px; font-weight: 800; color: var(--orange); }
+.zone-sub  { font-size: 12px; color: var(--text2); margin-bottom: 9px; }
+.zone-bar  { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+.zone-fill { height: 100%; background: var(--orange); border-radius: 2px; transition: width .3s; }
+.zone-btns { display: flex; gap: 8px; }
+.zone-btns .btn { flex: 1; }
+.undo-btn {
+  background: none; border: 1px solid var(--border); color: var(--text2);
+  border-radius: 8px; padding: 12px 14px; cursor: pointer; font-size: 17px;
+  transition: all .15s; flex-shrink: 0;
+}
+.undo-btn:active { transform: scale(0.95); }
+
+/* History */
+.hist-item { background: var(--bg2); border-radius: var(--r); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 12px; }
+.hist-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.hist-workout { font-size: 15px; font-weight: 700; }
+.hist-date    { font-size: 12px; color: var(--text2); }
+.hist-del { background: none; border: none; color: var(--red); font-size: 17px; cursor: pointer; padding: 2px 4px; line-height: 1; }
+.hist-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.hist-stat  { font-size: 12px; color: var(--text2); }
+.hist-stat strong { color: var(--text); }
+.empty { text-align: center; padding: 48px 20px; color: var(--text2); }
+.empty-icon { font-size: 52px; margin-bottom: 14px; }
+
+/* Complete overlay */
+#overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 200; text-align: center; padding: 24px;
+}
+#overlay.hidden { display: none; }
+.ov-icon  { font-size: 80px; margin-bottom: 16px; }
+.ov-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+.ov-sub   { font-size: 16px; color: var(--text2); margin-bottom: 8px; }
+.ov-streak { font-size: 22px; font-weight: 800; margin-bottom: 24px; }
+.ov-streak span { color: var(--orange); }
+
+/* Confetti canvas */
+#confetti-canvas {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 300; display: none;
+}
+
+/* Streak & Calendar */
+#streak-section {
+  background: var(--bg2); border-radius: var(--r);
+  padding: 14px; margin-bottom: 16px;
+}
+.streak-header {
+  text-align: center; font-size: 22px; font-weight: 800; margin-bottom: 12px;
+}
+.streak-header span { color: var(--orange); }
+.cal-month {
+  text-align: center; font-size: 12px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+}
+.cal-dow {
+  display: grid; grid-template-columns: repeat(7,1fr);
+  text-align: center; font-size: 10px; color: var(--text2); margin-bottom: 4px;
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+}
+.cal-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; border-radius: 50%; color: var(--text2);
+}
+.cal-done { background: var(--orange); color: #fff; font-weight: 700; }
+.cal-today { border: 2px solid var(--orange); color: var(--text); }
+.cal-done.cal-today { border-color: #fff; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: calc(76px + var(--safe-b)); left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--bg3); color: var(--text); border: 1px solid var(--border);
+  border-radius: 20px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: opacity .25s, transform .25s; z-index: 100;
+  white-space: nowrap; pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <span class="logo"><span class="logo-hoop">Hoop</span>Trainer</span>
+    <span><a href="cv.html?v=13" style="color:#ff7a1a;text-decoration:none;font-size:13px;font-weight:700;margin-right:10px;">📹 Live</a><span style="font-size:22px;">🏀</span></span>
+  </header>
+
+  <main>
+
+    <!-- ═══ TIMER TAB ═══ -->
+    <div id="tab-timer" class="tab active">
+
+      <div class="section-lbl">Workout</div>
+      <div class="card" style="padding:12px 14px 16px;">
+        <div class="select-wrap" style="margin-bottom:10px;">
+          <select id="workout-select" onchange="selectWorkout(this.value)">
+            <option value="ballhandling">🏀 Ball Handling Basics</option>
+            <option value="fundamentals">🔥 Fundamentals</option>
+            <option value="handleseasy">⚡ Handles (Easy)</option>
+            <option value="handles">💀 Handles (Hard)</option>
+            <option value="shooting">🎯 Shooting Form</option>
+            <option value="threepoint">🌟 3-Point Specialist</option>
+            <option value="fullworkout">💪 Full Workout</option>
+            <option value="custom">✏️ Custom Workout</option>
+          </select>
+        </div>
+        <div id="workout-desc" style="font-size:13px;color:var(--text2);line-height:1.4;margin-bottom:14px;"></div>
+
+        <!-- Rest duration picker -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);margin-bottom:6px;">Rest between drills</div>
+        <div class="rest-pills" id="rest-pills">
+          <button class="rest-pill active" onclick="setRest(10,this)">10s</button>
+          <button class="rest-pill" onclick="setRest(20,this)">20s</button>
+          <button class="rest-pill" onclick="setRest(30,this)">30s</button>
+          <button class="rest-pill" onclick="setRest(60,this)">1 min</button>
+          <button class="rest-pill" onclick="showCustomRest(this)">Custom</button>
+        </div>
+        <div id="rest-custom-wrap" style="display:none;margin-top:8px;">
+          <input type="number" id="rest-custom-val" placeholder="Seconds (5–300)" min="5" max="300"
+                 oninput="restDur = Math.min(300, Math.max(5, parseInt(this.value)||10))">
+        </div>
+      </div>
+
+      <!-- Custom builder -->
+      <div id="custom-builder" class="card" style="display:none;">
+        <div class="section-lbl" style="margin-bottom:14px;">Build Your Workout</div>
+        <div id="cb-list"></div>
+        <button class="btn btn-secondary btn-sm btn-full" style="margin-bottom:10px;" onclick="addCbDrill()">+ Add Drill</button>
+        <button class="btn btn-primary btn-sm btn-full" onclick="saveCbWorkout()">✓ Save &amp; Use</button>
+      </div>
+
+      <!-- Timer display -->
+      <div class="card" style="padding:16px;">
+        <div class="timer-display">
+          <div class="drill-name" id="drill-name">Select a workout to begin</div>
+          <div class="drill-prog"  id="drill-prog"></div>
+          <div class="timer-circle-wrap">
+            <svg class="t-svg" viewBox="0 0 210 210">
+              <circle class="t-track"    cx="105" cy="105" r="92"/>
+              <circle class="t-progress" id="t-arc" cx="105" cy="105" r="92"
+                stroke-dasharray="578.1" stroke-dashoffset="0"/>
+            </svg>
+            <div class="timer-center">
+              <div class="timer-time"  id="t-time">0:00</div>
+              <div class="timer-phase" id="t-phase">Ready</div>
+            </div>
+          </div>
+          <div class="timer-ctrls">
+            <button class="btn btn-secondary btn-sm" onclick="resetTimer()">↺ Reset</button>
+            <button class="btn btn-primary" id="start-btn" onclick="toggleTimer()">▶ Start</button>
+            <button class="btn btn-secondary btn-sm" onclick="skipDrill()">Skip ↷</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-lbl">Drills</div>
+      <div class="card" style="padding:10px 16px;">
+        <ul class="drill-list" id="drill-list"></ul>
+      </div>
+    </div>
+
+    <!-- ═══ SHOTS TAB ═══ -->
+    <div id="tab-shots" class="tab">
+      <div class="section-lbl">Session Stats</div>
+      <div class="totals">
+        <div><div class="stat-val" id="tot-makes">0</div><div class="stat-lbl">Makes</div></div>
+        <div><div class="stat-val" id="tot-att">0</div><div class="stat-lbl">Attempts</div></div>
+        <div><div class="stat-val" id="tot-fg">—</div><div class="stat-lbl">FG%</div></div>
+      </div>
+      <div class="section-lbl">Zones</div>
+      <div id="zone-cards"></div>
+      <button class="btn btn-primary btn-full" onclick="saveSession()" style="margin-top:4px;">💾 Save Session</button>
+      <button class="btn btn-secondary btn-full" onclick="resetShots()" style="margin-top:10px;">↺ Reset Shots</button>
+    </div>
+
+    <!-- ═══ HISTORY TAB ═══ -->
+    <div id="tab-history" class="tab">
+      <div id="streak-section">
+        <div class="streak-header">🔥 <span id="streak-num">0</span> day streak</div>
+        <div id="cal-grid"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-lbl" style="margin-bottom:0;">Past Sessions</div>
+        <button class="btn btn-secondary btn-sm" onclick="clearHistory()">Clear All</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+  </main>
+
+  <nav>
+    <button class="nav-btn active" id="nav-timer" onclick="switchTab('timer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>Timer
+    </button>
+    <button class="nav-btn" id="nav-shots" onclick="switchTab('shots')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+      </svg>Shots
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>History
+    </button>
+  </nav>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="overlay" class="hidden">
+  <div class="ov-icon">🏆</div>
+  <div class="ov-title">Workout Complete!</div>
+  <div class="ov-sub" id="ov-sub"></div>
+  <div class="ov-streak" id="ov-streak"></div>
+  <button class="btn btn-primary" onclick="dismissOverlay()" style="min-width:200px;font-size:17px;">Done 🎉</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// AUDIO ENGINE
+// ══════════════════════════════════════════
+let _actx = null;
+
+function actx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume();
+  return _actx;
+}
+
+function tone(freq, dur, type='sine', vol=0.35, delay=0) {
+  try {
+    const c = actx();
+    const o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = type; o.frequency.value = freq;
+    const t = c.currentTime + delay;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch(e) {}
+}
+
+function chime()     { tone(523,.12,'sine',.3); tone(659,.12,'sine',.3,.14); tone(784,.28,'sine',.3,.28); }
+function restBell()  { tone(440,.15,'sine',.25); tone(330,.3,'sine',.2,.15); } // descending = rest
+function startBell() { tone(659,.08,'sine',.3); tone(880,.22,'sine',.3,.09); }  // ascending = go
+function beep(hi)    { tone(hi ? 1047 : 880, .09, 'square', .18); }
+function doneBell()  { [523,659,784,1047].forEach((n,i) => tone(n,.25,'sine',.35,i*.1)); }
+function makeBeep()  { tone(880,.05,'sine',.18); tone(1047,.1,'sine',.18,.06); }
+function missBeep()  { tone(200,.12,'triangle',.2); }
+
+// ══════════════════════════════════════════
+// TTS — picks best available iOS voice
+// ══════════════════════════════════════════
+let selectedVoice = null;
+
+function initVoices() {
+  const pick = () => {
+    const all = window.speechSynthesis.getVoices();
+    if (!all.length) return;
+    // Prefer these voices in order — Samantha & Nicky sound the most natural on iOS
+    const names = ['Samantha', 'Nicky', 'Karen', 'Moira', 'Tessa', 'Daniel', 'Aaron'];
+    for (const n of names) {
+      const v = all.find(v => v.name.includes(n) && v.lang.startsWith('en'));
+      if (v) { selectedVoice = v; return; }
+    }
+    // Fall back to any en-US local voice
+    selectedVoice = all.find(v => v.lang === 'en-US' && v.localService)
+                 || all.find(v => v.lang.startsWith('en'))
+                 || all[0] || null;
+  };
+  pick();
+  if ('onvoiceschanged' in window.speechSynthesis)
+    window.speechSynthesis.onvoiceschanged = pick;
+}
+
+function speak(txt, cancel=false) {
+  if (!('speechSynthesis' in window)) return;
+  if (cancel) window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'en-US';
+  if (selectedVoice) u.voice = selectedVoice;
+  u.rate  = 0.98;
+  u.pitch = 1.05; // very slightly raised = more energetic
+  u.volume = 1.0;
+  window.speechSynthesis.speak(u);
+}
+
+// ══════════════════════════════════════════
+// MOTIVATIONAL CUES
+// ══════════════════════════════════════════
+const HYPE = [
+  "Keep going, you got this!",
+  "Stay focused. Looking good.",
+  "Push through it — almost there.",
+  "Let's go! Stay locked in.",
+  "That's the work right there.",
+  "Don't slow down now!",
+  "Stay with it. You're doing great.",
+  "Keep that intensity up!",
+  "Eyes up, stay sharp.",
+  "Grind it out. Let's go!",
+];
+
+function sayMotiv() {
+  const line = HYPE[Math.floor(Math.random() * HYPE.length)];
+  speak(line, false); // queue, don't cancel countdown
+}
+
+// ══════════════════════════════════════════
+// WORKOUT DATA
+// ══════════════════════════════════════════
+const PRESETS = {
+  ballhandling: {
+    name:'Ball Handling Basics', desc:'Sharpen your handles with focused dribbling drills',
+    drills:[
+      {name:'Warm-Up: Stationary Dribble', dur:60},
+      {name:'Low Crossover',               dur:90},
+      {name:'Behind the Back',             dur:90},
+      {name:'Between the Legs',            dur:90},
+      {name:'Figure 8',                    dur:90},
+      {name:'Two Ball Dribble',            dur:120},
+      {name:'Speed Dribble (Full Court)',  dur:90},
+      {name:'Cool Down: Slow Dribble',     dur:60},
+    ]
+  },
+  shooting: {
+    name:'Shooting Form', desc:'Close-range form shooting to groove your mechanics',
+    drills:[
+      {name:'Catch & Shoot: Right Elbow', dur:120},
+      {name:'Catch & Shoot: Left Elbow',  dur:120},
+      {name:'Mid-Range Pull-Up: Right',   dur:90},
+      {name:'Mid-Range Pull-Up: Left',    dur:90},
+      {name:'Free Throw Routine',         dur:120},
+      {name:'Free Throw Pressure Pairs',  dur:90},
+    ]
+  },
+  threepoint: {
+    name:'3-Point Specialist', desc:'3-point shooting from every position on the arc',
+    drills:[
+      {name:'Right Corner 3',           dur:90},
+      {name:'Left Corner 3',            dur:90},
+      {name:'Right Wing 3',             dur:90},
+      {name:'Left Wing 3',              dur:90},
+      {name:'Top of the Key 3',         dur:90},
+      {name:'Catch & Shoot (Moving)',   dur:120},
+      {name:'Step-Back 3',              dur:120},
+    ]
+  },
+  fullworkout: {
+    name:'Full Workout', desc:'Complete session — handles, mid-range, and 3-point',
+    drills:[
+      {name:'Warm-Up Dribble',     dur:60},
+      {name:'Crossover Series',    dur:90},
+      {name:'Form Shooting',       dur:90},
+      {name:'Elbow Pull-Up',       dur:90},
+      {name:'Mid-Range Jumper',    dur:90},
+      {name:'Corner 3-Pointers',   dur:90},
+      {name:'Wing 3-Pointers',     dur:90},
+      {name:'Free Throws',         dur:120},
+      {name:'Cool Down Stretch',   dur:60},
+    ]
+  },
+  fundamentals: {
+    name:'Fundamentals', desc:'Core dribbling fundamentals — control and coordination',
+    drills:[
+      {name:'Right Pound',              dur:60},
+      {name:'Left Pound',               dur:60},
+      {name:'Right V Dribble In & Out', dur:60},
+      {name:'Left V Dribble In & Out',  dur:60},
+      {name:'Right High to Low',        dur:60},
+      {name:'Left High to Low',         dur:60},
+      {name:'Pound Twice Cross',        dur:60},
+      {name:'Figure 8',                 dur:60},
+      {name:'Wrap Around Waist',        dur:60},
+      {name:'Wrap Around Legs',         dur:60},
+    ]
+  },
+  handleseasy: {
+    name:'Handles (Easy)', desc:'3-dribble combos to build your handle',
+    drills:[
+      {name:'3 Pound Front Cross',    dur:60},
+      {name:'3 Pound Between the Legs Cross', dur:60},
+      {name:'3 Dribble Spin Dribble', dur:60},
+      {name:'Wrap Around Dribbles',   dur:60},
+    ]
+  },
+  handles: {
+    name:'Handles (Hard)', desc:'1-dribble combos — elite handle challenge',
+    drills:[
+      {name:'1 Pound Front Cross',    dur:60},
+      {name:'1 Pound Between the Legs Cross', dur:60},
+      {name:'1 Dribble Spin Dribble', dur:60},
+      {name:'Wrap Around Dribbles',   dur:60},
+    ]
+  },
+  custom: { name:'Custom Workout', desc:'Build your own training session', drills:[] }
+};
+
+// ══════════════════════════════════════════
+// TIMER STATE
+// ══════════════════════════════════════════
+const CIRC = 2 * Math.PI * 92; // ≈578.1
+
+let interval     = null;
+let running      = false;
+let curWorkout   = 'ballhandling';
+let drills       = [];
+let dIdx         = 0;
+let timeLeft     = 0;
+let drillDur     = 0;
+let workoutStart = null;
+let spoke30      = false;
+let isResting    = false;
+let restTarget   = 0;
+let restDur      = 10; // default rest seconds
+
+// ── Rest duration UI ────────────────────
+function setRest(secs, btn) {
+  restDur = secs;
+  document.querySelectorAll('.rest-pill').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('rest-custom-wrap').style.display = 'none';
+}
+
+function showCustomRest(btn) {
+  document.querySelectorAll('.rest-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('rest-custom-wrap').style.display = 'block';
+  restDur = parseInt(document.getElementById('rest-custom-val').value) || 15;
+}
+
+// ── Workout selection ────────────────────
+function selectWorkout(key) {
+  curWorkout = key;
+  resetTimer();
+  const p = PRESETS[key];
+  document.getElementById('workout-desc').textContent = p.desc;
+  const showCB = key === 'custom';
+  document.getElementById('custom-builder').style.display = showCB ? 'block' : 'none';
+  if (!showCB) { drills = p.drills.map(d=>({...d})); renderDrillList(); loadDrill(0); }
+  else if (PRESETS.custom.drills.length) { drills = PRESETS.custom.drills.map(d=>({...d})); renderDrillList(); loadDrill(0); }
+}
+
+// ── Drill loading ────────────────────────
+function loadDrill(i) {
+  if (i >= drills.length) { completeWorkout(); return; }
+  dIdx = i; spoke30 = false; isResting = false;
+  const d = drills[i];
+  timeLeft = d.dur; drillDur = d.dur;
+  document.getElementById('drill-name').textContent = d.name;
+  document.getElementById('drill-prog').textContent = drills.length ? `Drill ${i+1} of ${drills.length}` : '';
+  updateDisplay(false); renderDrillList();
+}
+
+// ── Display update ────────────────────────
+function updateDisplay(resting) {
+  const m = Math.floor(timeLeft/60), s = timeLeft%60;
+  document.getElementById('t-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const arc = document.getElementById('t-arc');
+  const pct = drillDur > 0 ? timeLeft/drillDur : 1;
+  arc.style.strokeDashoffset = CIRC * (1-pct);
+  arc.classList.remove('t-warn','t-danger','t-rest');
+  if (resting) { arc.classList.add('t-rest'); return; }
+  if (timeLeft <= 10) arc.classList.add('t-danger');
+  else if (timeLeft <= 30) arc.classList.add('t-warn');
+}
+
+// ── Toggle ───────────────────────────────
+function toggleTimer() {
+  actx();
+  if (!drills.length) { toast('Select or build a workout first'); return; }
+  running ? pauseTimer() : startTimer();
+}
+
+function startTimer() {
+  running = true;
+  workoutStart = workoutStart || Date.now();
+  document.getElementById('start-btn').textContent = '⏸ Pause';
+  if (isResting) {
+    // Resume rest countdown
+    document.getElementById('t-phase').textContent = 'Rest';
+    interval = setInterval(restTick, 1000);
+  } else {
+    document.getElementById('t-phase').textContent = 'Active';
+    speak(drills[dIdx].name, true);
+    startBell();
+    interval = setInterval(tick, 1000);
+  }
+}
+
+function pauseTimer() {
+  running = false;
+  clearInterval(interval); interval = null;
+  document.getElementById('start-btn').textContent = '▶ Resume';
+  document.getElementById('t-phase').textContent = 'Paused';
+}
+
+// ── Drill tick ───────────────────────────
+function tick() {
+  if (isResting) return;
+  if (timeLeft <= 0) { nextDrill(); return; }
+  timeLeft--;
+
+  // 30-second cue (only on longer drills)
+  if (timeLeft === 30 && !spoke30 && drillDur > 45) {
+    spoke30 = true;
+    speak('30 seconds remaining.');
+  }
+
+  // Motivational cue: fire at elapsed 40s mark, then every 45s, but not during countdown
+  const elapsed = drillDur - timeLeft;
+  if (elapsed > 0 && elapsed % 45 === 0 && timeLeft > 12 && drillDur > 50) {
+    sayMotiv();
+  }
+
+  // 10-second countdown
+  if (timeLeft <= 10 && timeLeft > 0) {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    speak(String(timeLeft));
+    beep(timeLeft <= 5);
+  }
+
+  updateDisplay(false);
+}
+
+// ── Next drill / rest ────────────────────
+function nextDrill() {
+  clearInterval(interval); interval = null;
+  const ni = dIdx + 1;
+  if (ni >= drills.length) { completeWorkout(); return; }
+
+  chime();
+  speak(`Drill complete. Rest up.`, true);
+  startRest(ni);
+}
+
+function startRest(ni) {
+  isResting = true;
+  restTarget = ni;
+  const nd = drills[ni];
+
+  // Show rest state in UI
+  document.getElementById('drill-name').textContent = `Next up: ${nd.name}`;
+  document.getElementById('drill-prog').textContent = `Rest · Drill ${ni+1} of ${drills.length}`;
+  document.getElementById('t-phase').textContent = 'Rest';
+
+  // Arc counts down the rest period
+  drillDur = restDur;
+  timeLeft  = restDur;
+  updateDisplay(true);
+  renderDrillList();
+
+  restBell();
+
+  // Start rest countdown if still running
+  if (running) {
+    interval = setInterval(restTick, 1000);
+  }
+}
+
+function restTick() {
+  if (!running) return;
+  timeLeft--;
+  updateDisplay(true);
+
+  if (timeLeft === 3) {
+    speak(`Get ready. ${drills[restTarget].name}.`, true);
+    startBell();
+  }
+
+  if (timeLeft <= 0) {
+    clearInterval(interval); interval = null;
+    isResting = false;
+    loadDrill(restTarget);
+    if (running) {
+      interval = setInterval(tick, 1000);
+      document.getElementById('t-phase').textContent = 'Active';
+    }
+  }
+}
+
+// ── Skip ─────────────────────────────────
+function skipDrill() {
+  if (!drills.length) return;
+  clearInterval(interval); interval = null;
+
+  if (isResting) {
+    // Skip the rest, jump straight to next drill
+    isResting = false;
+    loadDrill(restTarget);
+    if (running) {
+      interval = setInterval(tick, 1000);
+      document.getElementById('t-phase').textContent = 'Active';
+      speak(drills[restTarget].name, true);
+      startBell();
+    }
+    return;
+  }
+
+  const ni = dIdx + 1;
+  if (ni >= drills.length) { completeWorkout(); return; }
+  loadDrill(ni);
+  if (running) {
+    interval = setInterval(tick, 1000);
+    document.getElementById('t-phase').textContent = 'Active';
+  }
+}
+
+// ── Reset ─────────────────────────────────
+function resetTimer() {
+  running = false; isResting = false;
+  clearInterval(interval); interval = null;
+  workoutStart = null;
+  document.getElementById('start-btn').textContent = '▶ Start';
+  document.getElementById('t-phase').textContent = 'Ready';
+  if (drills.length) loadDrill(0);
+  else {
+    document.getElementById('drill-name').textContent = 'Select a workout to begin';
+    document.getElementById('drill-prog').textContent = '';
+    document.getElementById('t-time').textContent = '0:00';
+    const arc = document.getElementById('t-arc');
+    arc.style.strokeDashoffset = '0';
+    arc.classList.remove('t-warn','t-danger','t-rest');
+    document.getElementById('drill-list').innerHTML = '';
+  }
+}
+
+// ── Complete ──────────────────────────────
+function completeWorkout() {
+  running = false; isResting = false;
+  clearInterval(interval); interval = null;
+  doneBell();
+  speak('Workout complete! Great work today!', true);
+  addStreakDate();
+  const streak = getCurrentStreak();
+  const mins = workoutStart ? Math.round((Date.now()-workoutStart)/60000) : 0;
+  document.getElementById('ov-sub').textContent = `${mins} minute session · ${drills.length} drills`;
+  document.getElementById('ov-streak').innerHTML = streak > 1
+    ? `🔥 <span style="color:var(--orange)">${streak} day streak!</span>`
+    : `🔥 Day 1 — keep it going!`;
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('start-btn').textContent = '▶ Start';
+  document.getElementById('t-phase').textContent = 'Done!';
+  workoutStart = null;
+  launchConfetti();
+}
+
+function dismissOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+  resetTimer();
+}
+
+// ── Drill list render ──────────────────────
+function renderDrillList() {
+  const el = document.getElementById('drill-list');
+  if (!drills.length) { el.innerHTML = ''; return; }
+  el.innerHTML = drills.map((d,i) => {
+    let cls = '';
+    if (i < dIdx) cls = 'd-done';
+    else if (i === dIdx && isResting) cls = 'd-done'; // current just finished
+    else if (i === dIdx) cls = 'd-active';
+    else if (i === restTarget && isResting) cls = 'd-rest';
+
+    const m = Math.floor(d.dur/60), s = d.dur%60;
+    const ds = m > 0 ? `${m}m${s>0?' '+s+'s':''}` : `${s}s`;
+    return `<li class="drill-row ${cls}">
+      <div class="drill-num">${i+1}</div>
+      <div class="drill-name-t">${d.name}</div>
+      <div class="drill-dur">${ds}</div>
+    </li>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// CUSTOM BUILDER
+// ══════════════════════════════════════════
+let cbDrills = [{name:'',dur:60}];
+
+function addCbDrill()   { cbDrills.push({name:'',dur:60}); renderCB(); }
+function delCbDrill(i)  { if(cbDrills.length>1){cbDrills.splice(i,1); renderCB();} }
+function setCbName(i,v) { cbDrills[i].name = v; }
+function setCbDur(i,v)  { cbDrills[i].dur = Math.max(5, parseInt(v)||60); }
+
+function renderCB() {
+  document.getElementById('cb-list').innerHTML = cbDrills.map((d,i) => `
+    <div class="cb-row">
+      <input type="text" placeholder="Drill name" value="${d.name.replace(/"/g,'&quot;')}"
+             oninput="setCbName(${i},this.value)">
+      <input type="number" placeholder="Sec" value="${d.dur}" min="5" max="600"
+             onchange="setCbDur(${i},this.value)">
+      <button class="del-btn" onclick="delCbDrill(${i})">✕</button>
+    </div>`).join('');
+}
+
+function saveCbWorkout() {
+  const valid = cbDrills.filter(d => d.name.trim().length > 0);
+  if (!valid.length) { toast('Add at least one drill with a name'); return; }
+  PRESETS.custom.drills = valid.map(d=>({...d}));
+  drills = PRESETS.custom.drills.map(d=>({...d}));
+  loadDrill(0); renderDrillList();
+  document.getElementById('custom-builder').style.display = 'none';
+  toast('Custom workout saved!');
+}
+
+// ══════════════════════════════════════════
+// SHOT TRACKER
+// ══════════════════════════════════════════
+const ZONES = [
+  {id:'paint',    label:'🟠 Paint / Under Basket', makes:0, att:0},
+  {id:'midrange', label:'🟡 Mid-Range',            makes:0, att:0},
+  {id:'three',    label:'🟢 Three-Point Range',    makes:0, att:0},
+];
+
+function shoot(zi, made) {
+  actx();
+  ZONES[zi].att++;
+  if (made) { ZONES[zi].makes++; makeBeep(); }
+  else { missBeep(); }
+  renderZones(); updateTotals();
+}
+
+function undoShot(zi) {
+  const z = ZONES[zi];
+  if (!z.att) return;
+  z.att--;
+  if (z.makes > z.att) z.makes = z.att;
+  renderZones(); updateTotals();
+}
+
+function renderZones() {
+  document.getElementById('zone-cards').innerHTML = ZONES.map((z,i) => {
+    const fg  = z.att ? Math.round(z.makes/z.att*100) : null;
+    return `<div class="zone-card">
+      <div class="zone-head">
+        <div>
+          <div class="zone-name-t">${z.label}</div>
+          <div class="zone-sub">${z.makes} / ${z.att} shots made</div>
+        </div>
+        <div class="zone-fg">${fg!==null?fg+'%':'—'}</div>
+      </div>
+      <div class="zone-bar"><div class="zone-fill" style="width:${fg??0}%"></div></div>
+      <div class="zone-btns">
+        <button class="btn btn-success" onclick="shoot(${i},true)">✓ Make</button>
+        <button class="btn btn-danger"  onclick="shoot(${i},false)">✗ Miss</button>
+        <button class="undo-btn" onclick="undoShot(${i})">↩</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateTotals() {
+  const m = ZONES.reduce((s,z)=>s+z.makes,0);
+  const a = ZONES.reduce((s,z)=>s+z.att,0);
+  document.getElementById('tot-makes').textContent = m;
+  document.getElementById('tot-att').textContent   = a;
+  document.getElementById('tot-fg').textContent    = a ? Math.round(m/a*100)+'%' : '—';
+}
+
+function resetShots() {
+  ZONES.forEach(z=>{z.makes=0;z.att=0;});
+  renderZones(); updateTotals(); toast('Shot tracker reset');
+}
+
+function saveSession() {
+  const m = ZONES.reduce((s,z)=>s+z.makes,0);
+  const a = ZONES.reduce((s,z)=>s+z.att,0);
+  if (!a) { toast('No shots recorded yet'); return; }
+  const sess = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    time: new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
+    workout: PRESETS[curWorkout]?.name || 'Workout',
+    makes: m, att: a, fg: Math.round(m/a*100),
+    zones: ZONES.map(z=>({label:z.label, makes:z.makes, att:z.att,
+      fg: z.att ? Math.round(z.makes/z.att*100) : null}))
+  };
+  const h = getHistory(); h.unshift(sess);
+  localStorage.setItem('ht_history', JSON.stringify(h));
+  toast('Session saved! 🎉');
+}
+
+// ══════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('ht_history')||'[]'); } catch(e){return[];}
+}
+
+function renderHistory() {
+  const h = getHistory();
+  const el = document.getElementById('history-list');
+  if (!h.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>
+      <p>No sessions saved yet.<br>Track some shots and save!</p></div>`;
+    return;
+  }
+  el.innerHTML = h.map(s => {
+    const zLines = s.zones.filter(z=>z.att>0).map(z =>
+      `<span class="hist-stat"><strong>${z.label.split(' ').slice(1).join(' ')}:</strong> ${z.fg!==null?z.fg+'%':'—'} (${z.makes}/${z.att})</span>`
+    ).join('');
+    return `<div class="hist-item">
+      <div class="hist-head">
+        <div>
+          <div class="hist-workout">${s.workout}</div>
+          <div class="hist-date">${s.date} · ${s.time}</div>
+        </div>
+        <button class="hist-del" onclick="delSession(${s.id})">🗑</button>
+      </div>
+      <div class="hist-stats">
+        <span class="hist-stat"><strong>Overall:</strong> ${s.fg}% (${s.makes}/${s.att})</span>
+        ${zLines}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function delSession(id) {
+  const h = getHistory().filter(s=>s.id!==id);
+  localStorage.setItem('ht_history', JSON.stringify(h));
+  renderHistory(); toast('Session deleted');
+}
+
+function clearHistory() {
+  if (!getHistory().length) return;
+  localStorage.removeItem('ht_history');
+  renderHistory(); toast('History cleared');
+}
+
+// ══════════════════════════════════════════
+// STREAKS
+// ══════════════════════════════════════════
+function getStreakDates() {
+  try { return JSON.parse(localStorage.getItem('ht_streaks')||'[]'); } catch(e){ return []; }
+}
+function addStreakDate() {
+  const today = new Date().toISOString().slice(0,10);
+  const dates = getStreakDates();
+  if (!dates.includes(today)) {
+    dates.push(today);
+    localStorage.setItem('ht_streaks', JSON.stringify(dates));
+  }
+}
+function getCurrentStreak() {
+  const dates = new Set(getStreakDates());
+  let streak = 0;
+  const d = new Date();
+  // check today first; if not done today, streak starts from yesterday
+  const todayStr = d.toISOString().slice(0,10);
+  if (!dates.has(todayStr)) d.setDate(d.getDate() - 1);
+  while (true) {
+    const key = d.toISOString().slice(0,10);
+    if (dates.has(key)) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+let calOffset = 0;   // months relative to now (negative = past, positive = future)
+function calNav(d) { calOffset += d; renderCalendar(); }
+function calToday() { calOffset = 0; renderCalendar(); }
+function renderCalendar() {
+  const dates = new Set(getStreakDates());
+  document.getElementById('streak-num').textContent = getCurrentStreak();
+  const now   = new Date();
+  const view  = new Date(now.getFullYear(), now.getMonth() + calOffset, 1);
+  const year  = view.getFullYear(), month = view.getMonth();
+  const first = new Date(year, month, 1).getDay();
+  const days  = new Date(year, month+1, 0).getDate();
+  const today = now.toISOString().slice(0,10);
+  const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const navBtn = 'background:none;border:none;color:#ff7a1a;font-size:16px;font-weight:800;padding:2px 14px;cursor:pointer;';
+  let h = `<div class="cal-month" style="display:flex;justify-content:space-between;align-items:center;">
+    <button style="${navBtn}" onclick="calNav(-1)">‹</button>
+    <span onclick="calToday()" style="cursor:pointer;">${mNames[month]} ${year}${calOffset ? ' ·' : ''}</span>
+    <button style="${navBtn}" onclick="calNav(1)">›</button>
+  </div>`;
+  h += '<div class="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+  h += '<div class="cal-grid">';
+  for (let i=0;i<first;i++) h += '<div class="cal-cell"></div>';
+  for (let d=1;d<=days;d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls = 'cal-cell';
+    if (dates.has(ds)) cls += ' cal-done';
+    if (ds === today)  cls += ' cal-today';
+    h += `<div class="${cls}">${d}</div>`;
+  }
+  h += '</div>';
+  document.getElementById('cal-grid').innerHTML = h;
+}
+
+// ══════════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════════
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  const colors = ['#FF6B00','#FFD700','#ffffff','#ff4e4e','#4a9eff','#3dba5c'];
+  const particles = Array.from({length:150}, () => ({
+    x: canvas.width/2, y: canvas.height*0.45,
+    vx: (Math.random()-0.5)*22,
+    vy: (Math.random()-0.9)*22,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    size: Math.random()*9+4,
+    rot: Math.random()*Math.PI*2,
+    rotV: (Math.random()-0.5)*0.25,
+    opacity: 1,
+    shape: Math.random()>0.4 ? 'rect' : 'circle'
+  }));
+  function animate() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.45;
+      p.rot += p.rotV; p.opacity -= 0.013;
+      if (p.opacity > 0) {
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        if (p.shape === 'rect') ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+        else { ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+    });
+    if (alive) requestAnimationFrame(animate);
+    else canvas.style.display = 'none';
+  }
+  animate();
+}
+
+// ══════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════
+function switchTab(t) {
+  ['timer','shots','history'].forEach(x => {
+    document.getElementById(`tab-${x}`).classList.toggle('active', x===t);
+    document.getElementById(`nav-${x}`).classList.toggle('active', x===t);
+  });
+  if (t==='history') { renderCalendar(); renderHistory(); }
+  // each tab starts at the top — scroll position shouldn't follow you around
+  window.scrollTo(0, 0);
+  const main = document.querySelector('main');
+  if (main) main.scrollTop = 0;
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initVoices();
+  selectWorkout('ballhandling');
+  renderCB();
+  renderZones();
+  renderCalendar();
+  renderHistory();
+});
+</script>
+</body>
+</html>

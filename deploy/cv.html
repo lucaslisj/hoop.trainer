@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HoopTrainer Live CV</title>
+<style>
+  :root {
+    --bg:#0d0d10; --card:#17171c; --line:#26262e;
+    --orange:#ff7a1a; --green:#2ecc71; --red:#e74c3c; --txt:#f2f2f4; --dim:#8b8b96;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--txt);
+         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         min-height:100vh; padding-bottom:32px; }
+  header { display:flex; justify-content:space-between; align-items:center;
+           padding:14px 16px; }
+  header h1 { font-size:18px; }
+  header h1 span { color:var(--orange); }
+  header a { color:var(--dim); text-decoration:none; font-size:13px; }
+  .wrap { padding:0 12px; max-width:760px; margin:0 auto; }
+
+  #stage { position:relative; width:100%; border-radius:14px; overflow:hidden;
+           background:#000; touch-action:pan-y; }
+  #stage.calibrating { touch-action:none; }
+  #view  { width:100%; display:block; }
+  #placeholder { aspect-ratio:16/9; display:flex; flex-direction:column; gap:10px;
+                 align-items:center; justify-content:center; color:var(--dim);
+                 font-size:14px; text-align:center; padding:20px; }
+
+  .tally { display:flex; gap:10px; margin:12px 0; }
+  .tally .cell { flex:1; background:var(--card); border:1px solid var(--line);
+                 border-radius:12px; padding:12px 4px; text-align:center; }
+  .tally .v { font-size:28px; font-weight:800; }
+  .tally .l { font-size:11px; color:var(--dim); text-transform:uppercase;
+              letter-spacing:.08em; margin-top:2px; }
+
+  .btn { display:block; width:100%; border:none; border-radius:12px;
+         padding:15px; font-size:16px; font-weight:700; cursor:pointer;
+         margin-top:10px; color:#fff; }
+  .btn-orange { background:var(--orange); color:#1a1006; }
+  .btn-dark   { background:var(--card); border:1px solid var(--line); color:var(--txt); }
+  .btn-green  { background:var(--green); color:#06180d; }
+  .btn:disabled { opacity:.35; }
+  .row { display:flex; gap:10px; }
+  .row .btn { flex:1; }
+
+  #status { font-size:12px; color:var(--dim); text-align:center; margin-top:10px;
+            min-height:16px; }
+  .adjust { display:flex; gap:8px; margin-top:10px; }
+  .adjust button { flex:1; background:var(--card); border:1px solid var(--line);
+                   color:var(--txt); border-radius:10px; padding:10px;
+                   font-size:13px; font-weight:600; }
+  .hidden { display:none !important; }
+
+  .cal-panel { background:var(--card); border:1px solid var(--line);
+               border-radius:12px; padding:10px; margin-top:10px; }
+  .cal-chips { display:flex; gap:6px; margin-bottom:8px; }
+  .cal-chips button { flex:1; background:var(--bg); border:1px solid var(--line);
+                      color:var(--dim); border-radius:8px; padding:8px 2px;
+                      font-size:12px; font-weight:700; }
+  .cal-chips button.sel { color:var(--orange); border-color:var(--orange); }
+  .cal-arrows { display:flex; gap:6px; }
+  .cal-arrows button { flex:1; background:var(--bg); border:1px solid var(--line);
+                       color:var(--txt); border-radius:8px; padding:12px 0;
+                       font-size:17px; touch-action:none; user-select:none;
+                       -webkit-user-select:none; }
+  .cal-arrows #cal-done { background:var(--green); color:#06180d;
+                          font-size:14px; font-weight:800; flex:1.4; }
+  .cal-hint { font-size:11px; color:var(--dim); margin-top:8px;
+              text-align:center; }
+
+  #flash { position:absolute; top:8%; left:0; right:0; text-align:center;
+           font-size:56px; font-weight:900; pointer-events:none; opacity:0;
+           transition:opacity .25s; text-shadow:0 2px 12px rgba(0,0,0,.7); }
+
+</style>
+</head>
+<body>
+<header>
+  <h1>🏀 HoopTrainer <span>Live</span> <span style="font-size:10px;color:var(--dim);font-weight:400;">v13</span></h1>
+  <a href="./">← back to app</a>
+</header>
+
+<div class="wrap">
+  <div id="stage">
+    <div id="placeholder">
+      <div style="font-size:34px">📹</div>
+      <div>Put the phone on a tripod <b>behind your shooting spot</b>,<br>
+           facing the basket. Then start the camera.</div>
+    </div>
+    <canvas id="view" class="hidden"></canvas>
+    <div id="flash"></div>
+  </div>
+
+  <div class="tally">
+    <div class="cell"><div class="v" id="t-makes">0</div><div class="l">Makes</div></div>
+    <div class="cell"><div class="v" id="t-att">0</div><div class="l">Attempts</div></div>
+    <div class="cell"><div class="v" id="t-fg">—</div><div class="l">FG%</div></div>
+  </div>
+
+  <button class="btn btn-orange" id="btn-cam">Start Camera</button>
+  <button class="btn btn-dark hidden"  id="btn-cal">Recalibrate Box</button>
+  <button class="btn btn-green hidden" id="btn-go">Start Counting</button>
+  <div class="row">
+    <button class="btn btn-dark hidden" id="btn-save">💾 End &amp; Save Session</button>
+  </div>
+  <div class="adjust hidden" id="adjust">
+    <button onclick="fix(1)">＋ Make (missed one)</button>
+    <button onclick="fix(0)">＋ Miss</button>
+    <button onclick="fixUndo()">↩ Undo last</button>
+  </div>
+  <div class="cal-panel" id="sndpanel" style="margin-top:10px;">
+    <div style="display:flex; gap:8px;">
+      <label style="flex:1; font-size:11px; color:var(--dim);">MAKE SOUND
+        <select id="snd-make" style="width:100%; margin-top:4px; background:var(--bg);
+          color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px;">
+          <option value="beep">Beep (default)</option>
+          <option value="horn">Air horn</option>
+          <option value="cash">Cha-ching</option>
+          <option value="custom">Custom (your MP3)…</option>
+        </select>
+      </label>
+      <label style="flex:1; font-size:11px; color:var(--dim);">MISS SOUND
+        <select id="snd-miss" style="width:100%; margin-top:4px; background:var(--bg);
+          color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px;">
+          <option value="beep">Beep (default)</option>
+          <option value="buzzer">Buzzer</option>
+          <option value="trombone">Sad trombone</option>
+          <option value="custom">Custom (your MP3)…</option>
+        </select>
+      </label>
+    </div>
+    <input type="file" id="snd-make-file" accept="audio/*" class="hidden">
+    <input type="file" id="snd-miss-file" accept="audio/*" class="hidden">
+    <button class="btn btn-dark" id="btn-rec" style="margin-top:10px; padding:11px;">⏺ Record session video</button>
+  </div>
+  <div class="cal-panel hidden" id="calpanel">
+    <div class="cal-chips">
+      <button data-m="left">Left</button><button data-m="right">Right</button>
+      <button data-m="top">Top</button><button data-m="bottom">Bottom</button>
+      <button data-m="move" class="sel">Move</button>
+    </div>
+    <div class="cal-arrows">
+      <button id="n-l">◀</button><button id="n-u">▲</button>
+      <button id="n-d">▼</button><button id="n-r">▶</button>
+      <button id="cal-redrag">✎</button>
+      <button id="cal-done">✓ Done</button>
+    </div>
+    <div class="cal-hint">Rough-drag on the video, then pick an edge and nudge
+      1px at a time (hold to repeat). The zoom window shows the detail.</div>
+  </div>
+  <div id="status">Camera stays on this page — nothing is uploaded or recorded.</div>
+</div>
+
+<script>
+'use strict';
+/* ═════════════════════════════════════════════════════════════
+   HoopTrainer Live CV — in-browser make/miss counter.
+   Direct port of cv/blob_detect.py + cv/score_simple.py
+   (validated 13/13 vs ground truth on lucas_clip2).
+   Detector: running-average background + red-orange color +
+   ball-sized blob, in a corridor around the calibrated box.
+   Counter: above rim-top arms, falling detection below net-bottom
+   resolves; x inside box = make; net-zone hits override net-kick.
+   ═════════════════════════════════════════════════════════════ */
+
+// ── tuning (mirrors the Python constants; times in seconds) ──
+const MOTION_THRESHOLD = 25, BG_ALPHA = 0.05;
+const X_MARGIN = 0.05, NEAR_X = 5.0, NET_ZONE_TOP = 0.25;
+const ARM_SLACK = 0.6;    // arm slightly below rim line (flat deep shots)
+const DEPTH_MISS = 1.45;  // crossing ball this much bigger than expected
+                          // = rebound flying toward camera => MISS
+const MIN_FLIGHT_S = 0.17, PREV_MAX_S = 0.15, FALL_MIN_PX = 4;
+const COOLDOWN_S = 1.0, TIMEOUT_S = 3.0, PRED_MAX_S = 0.4;
+
+const $ = id => document.getElementById(id);
+let video, stream, procCanvas, procCtx, viewCanvas, viewCtx;
+let box = null;            // {x1,y1,x2,y2} in processing coords
+let counting = false, calibrating = false;
+let makes = 0, attempts = 0, adjustLog = [];
+
+// ── audio (same voice as HoopTrainer) ──
+let AC = null;
+function actx(){ if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+function tone(f,d,type='sine',vol=.3,delay=0){
+  const a=actx(), o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.value=f; o.connect(g); g.connect(a.destination);
+  const t=a.currentTime+delay;
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d);
+  o.start(t); o.stop(t+d);
+}
+const makeBeep=()=>{tone(880,.05,'sine',.2);tone(1047,.1,'sine',.2,.06);};
+const missBeep=()=>{tone(200,.12,'triangle',.22);};
+// extra synth sounds
+function airHorn(){ [0,.09,.18].forEach(d=>{ tone(440,.5,'sawtooth',.22,d);
+  tone(554,.5,'sawtooth',.18,d); tone(659,.5,'sawtooth',.15,d); }); }
+function chaChing(){ tone(1319,.08,'square',.15); tone(1568,.08,'square',.15,.08);
+  tone(2093,.35,'sine',.25,.16); }
+function buzzer(){ tone(110,.5,'square',.3); tone(112,.5,'square',.2); }
+function sadTrombone(){ [392,370,349,330].forEach((f,i)=>
+  tone(f,.28,'sawtooth',.22,i*.22)); }
+
+// sound selection (persisted); custom = user-supplied audio file
+const SND = { make:'beep', miss:'beep', makeData:null, missData:null };
+try {
+  Object.assign(SND, JSON.parse(localStorage.getItem('ht_cv_sounds')||'{}'));
+} catch(e){}
+function saveSnd(){ localStorage.setItem('ht_cv_sounds', JSON.stringify(SND)); }
+function playVerdict(kind){
+  const sel = kind==='make' ? SND.make : SND.miss;
+  const data = kind==='make' ? SND.makeData : SND.missData;
+  if (sel==='custom' && data){ try{ new Audio(data).play(); }catch(e){} return; }
+  if (kind==='make'){
+    if (sel==='horn') airHorn();
+    else if (sel==='cash') chaChing();
+    else makeBeep();
+  } else {
+    if (sel==='buzzer') buzzer();
+    else if (sel==='trombone') sadTrombone();
+    else missBeep();
+  }
+}
+function wireSnd(kind){
+  const sel = $('snd-'+kind), file = $('snd-'+kind+'-file');
+  sel.value = SND[kind];
+  sel.onchange = () => {
+    if (sel.value==='custom'){ file.click(); return; }
+    SND[kind] = sel.value; saveSnd(); playVerdict(kind);
+  };
+  file.onchange = () => {
+    const f = file.files[0];
+    if (!f) { sel.value = SND[kind]; return; }
+    if (f.size > 400*1024){
+      $('status').textContent = 'Sound file too big — keep it under 400KB (trim the clip).';
+      sel.value = SND[kind]; return;
+    }
+    const r = new FileReader();
+    r.onload = () => {
+      SND[kind] = 'custom';
+      SND[kind==='make'?'makeData':'missData'] = r.result;
+      saveSnd(); playVerdict(kind);
+    };
+    r.readAsDataURL(f);
+  };
+}
+wireSnd('make'); wireSnd('miss');
+
+// ── session recording: captures the ANNOTATED canvas (trail + verdicts) ──
+let recorder = null, recChunks = [];
+$('btn-rec').onclick = () => {
+  if (recorder){
+    recorder.stop(); return;
+  }
+  if (!viewCanvas){ $('status').textContent = 'Start the camera first.'; return; }
+  const stream = viewCanvas.captureStream(30);
+  const mime = ['video/mp4','video/webm;codecs=vp9','video/webm']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+  recChunks = [];
+  recorder = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:4_000_000} : undefined);
+  recorder.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(recChunks, {type: recorder.mimeType});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hooptrainer_' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')
+               + (recorder.mimeType.includes('mp4') ? '.mp4' : '.webm');
+    a.click();
+    recorder = null;
+    $('btn-rec').textContent = '⏺ Record session video';
+    $('status').textContent = 'Recording saved — check your downloads / share sheet.';
+  };
+  recorder.start(1000);
+  $('btn-rec').textContent = '⏹ Stop recording';
+  $('status').textContent = 'Recording the annotated view (trail + verdicts included).';
+};
+
+// ═══ CAMERA ═══
+$('btn-cam').onclick = async () => {
+  try {
+    actx();
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'environment', width:{ideal:1280}, height:{ideal:720} },
+      audio:false });
+  } catch(e) { $('status').textContent = 'Camera blocked: ' + e.message; return; }
+  video = document.createElement('video');
+  video.srcObject = stream; video.setAttribute('playsinline','');
+  video.muted = true;
+  await video.play();
+
+  procCanvas = document.createElement('canvas');
+  procCanvas.width = video.videoWidth; procCanvas.height = video.videoHeight;
+  procCtx = procCanvas.getContext('2d', { willReadFrequently:true });
+  viewCanvas = $('view');
+  viewCanvas.width = video.videoWidth; viewCanvas.height = video.videoHeight;
+  viewCtx = viewCanvas.getContext('2d');
+  $('placeholder').classList.add('hidden');
+  viewCanvas.classList.remove('hidden');
+  $('btn-cam').classList.add('hidden');
+  $('btn-cal').classList.remove('hidden');
+
+  try { await navigator.wakeLock.request('screen'); } catch(e) {}
+
+  const saved = localStorage.getItem('ht_cv_box_v1');
+  if (saved) { box = JSON.parse(saved); onBoxReady(); }
+  else startCalibration();
+  loop();
+};
+
+// ═══ CALIBRATION (drag a box: rim top → net bottom) ═══
+// dragLocked: once the rough box is drawn, the video stops capturing
+// touches (page scrolls normally) so you can reach the nudge buttons.
+let dragStart = null, dragCur = null, dragLocked = false;
+function startCalibration(){
+  calibrating = true; counting = false;
+  dragLocked = !!box;                      // existing box => start locked
+  $('stage').classList.toggle('calibrating', !dragLocked);
+  $('btn-go').classList.add('hidden');
+  $('status').textContent = dragLocked
+    ? 'Box locked — scroll down and nudge, or tap ✎ to re-drag.'
+    : 'Drag a box around the basket: rim top edge → bottom of the net.';
+}
+$('btn-cal').onclick = () => {
+  startCalibration();
+  if (box) $('calpanel').classList.remove('hidden');
+};
+
+function evtPos(e){
+  const r = viewCanvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return { x:(p.clientX-r.left)/r.width*procCanvas.width,
+           y:(p.clientY-r.top)/r.height*procCanvas.height };
+}
+const stage = $('stage');
+stage.addEventListener('pointerdown', e => {
+  if (!calibrating || dragLocked) return;
+  dragStart = evtPos(e); dragCur = dragStart;
+});
+stage.addEventListener('pointermove', e => {
+  if (!calibrating || dragLocked || !dragStart) return;
+  dragCur = evtPos(e);
+});
+stage.addEventListener('pointerup', () => {
+  if (!calibrating || !dragStart || !dragCur) return;
+  const x1=Math.min(dragStart.x,dragCur.x), x2=Math.max(dragStart.x,dragCur.x);
+  const y1=Math.min(dragStart.y,dragCur.y), y2=Math.max(dragStart.y,dragCur.y);
+  dragStart = dragCur = null;
+  if (x2-x1 < 8 || y2-y1 < 8) return;         // ignore taps
+  box = { x1:Math.round(x1), y1:Math.round(y1),
+          x2:Math.round(x2), y2:Math.round(y2) };
+  dragLocked = true;                          // lock: page scrolls again
+  $('stage').classList.remove('calibrating');
+  $('calpanel').classList.remove('hidden');   // rough box set -> fine-tune
+  $('status').textContent = 'Box locked ✔ — scroll down, nudge the edges, then tap ✓ Done.';
+});
+// ── fine-tune calibration (nudge buttons) ──
+let calMode = 'move';
+document.querySelectorAll('.cal-chips button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.cal-chips button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel'); calMode = b.dataset.m;
+  };
+});
+function nudge(dx, dy){
+  if (!box) return;
+  const W = procCanvas.width, H = procCanvas.height;
+  if (calMode==='left')   box.x1 += dx;
+  else if (calMode==='right')  box.x2 += dx;
+  else if (calMode==='top')    box.y1 += dy;
+  else if (calMode==='bottom') box.y2 += dy;
+  else { box.x1+=dx; box.x2+=dx; box.y1+=dy; box.y2+=dy; }
+  // keep the box sane: >=6px each way, inside the frame
+  box.x1 = Math.max(0, Math.min(box.x1, box.x2-6));
+  box.x2 = Math.min(W, Math.max(box.x2, box.x1+6));
+  box.y1 = Math.max(0, Math.min(box.y1, box.y2-6));
+  box.y2 = Math.min(H, Math.max(box.y2, box.y1+6));
+}
+function bindHold(id, dx, dy){
+  const el = $(id); let timer = null;
+  const stop = () => { if (timer){ clearInterval(timer); timer=null; } };
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); nudge(dx,dy);
+    timer = setInterval(()=>nudge(dx,dy), 110);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev =>
+    el.addEventListener(ev, stop));
+}
+bindHold('n-l',-1,0); bindHold('n-r',1,0);
+bindHold('n-u',0,-1); bindHold('n-d',0,1);
+$('cal-redrag').onclick = () => {
+  dragLocked = false;
+  $('stage').classList.add('calibrating');
+  $('status').textContent = 'Drag a new box on the video (touch is captured until you finish).';
+};
+$('cal-done').onclick = () => {
+  if (!box) return;
+  localStorage.setItem('ht_cv_box_v1', JSON.stringify(box));
+  calibrating = false;
+  $('stage').classList.remove('calibrating');
+  $('calpanel').classList.add('hidden');
+  onBoxReady();
+};
+
+function onBoxReady(){
+  detector = new BlobDetector(box, procCanvas.width, procCanvas.height);
+  counter  = new ShotCounter(box);
+  $('btn-go').classList.remove('hidden');
+  $('status').textContent = 'Box set. Start counting when you’re ready to shoot.';
+}
+
+$('btn-go').onclick = () => {
+  counting = true;
+  $('btn-go').classList.add('hidden');
+  $('btn-save').classList.remove('hidden');
+  $('adjust').classList.remove('hidden');
+  $('status').textContent = 'Counting… make/miss beeps play automatically.';
+};
+
+// ═══ DETECTOR (port of BlobDetector) ═══
+let detector = null, counter = null;
+const eroded = { buf:null, n:0 };
+const dilated = { buf:null, n:0 };
+function findBallCands(mask, rw, rh, ballD, ox, oy){
+  const n = rw*rh;
+  if (eroded.n !== n){ eroded.buf = new Uint8Array(n); eroded.n = n; }
+  const er = eroded.buf;
+  // exact 3x3 erosion (border pixels excluded, like OpenCV with border 0)
+  for (let y=0; y<rh; y++){
+    const off = y*rw;
+    for (let x=0; x<rw; x++){
+      const i = off+x;
+      if (!mask[i] || x===0 || y===0 || x===rw-1 || y===rh-1){ er[i]=0; continue; }
+      er[i] = (mask[i-1] & mask[i+1] &
+               mask[i-rw] & mask[i-rw-1] & mask[i-rw+1] &
+               mask[i+rw] & mask[i+rw-1] & mask[i+rw+1]) ? 1 : 0;
+    }
+  }
+  // dilate 3x3 (rebuilds what erosion shrank — matches OpenCV's OPEN;
+  // without this, motion-blurred fast balls erode away and are lost)
+  if (dilated.n !== n){ dilated.buf = new Uint8Array(n); dilated.n = n; }
+  const di = dilated.buf;
+  for (let y=0; y<rh; y++){
+    const off = y*rw;
+    for (let x=0; x<rw; x++){
+      const i = off+x;
+      let v = er[i];
+      if (!v && x>0 && y>0 && x<rw-1 && y<rh-1){
+        v = er[i-1] | er[i+1] | er[i-rw] | er[i-rw-1] | er[i-rw+1] |
+            er[i+rw] | er[i+rw-1] | er[i+rw+1];
+      }
+      di[i] = v;
+    }
+  }
+  // downsample 2x2 (any survivor) — combined with the distance-2 BFS below
+  // this approximates OpenCV's open-then-dilate(5x5)
+  const w2 = rw>>1, h2 = rh>>1;
+  const ds = new Uint8Array(w2*h2);
+  for (let y=0; y<h2; y++){
+    for (let x=0; x<w2; x++){
+      const i0 = (y*2)*rw + x*2;
+      ds[y*w2+x] = (di[i0] | di[i0+1] | di[i0+rw] | di[i0+rw+1]) ? 1 : 0;
+    }
+  }
+  const cands = [], seen = new Uint8Array(w2*h2), qx=[], qy=[];
+  const minD = ballD*0.35, maxD = ballD*1.9;
+  const NB = [];
+  for (let dy=-2; dy<=2; dy++) for (let dx=-2; dx<=2; dx++)
+    if (dx||dy) NB.push([dx,dy]);
+  for (let y=0; y<h2; y++){
+    for (let x=0; x<w2; x++){
+      const idx = y*w2+x;
+      if (!ds[idx] || seen[idx]) continue;
+      let minX=x,maxX=x,minY=y,maxY=y,count=0;
+      qx.length=0; qy.length=0; qx.push(x); qy.push(y); seen[idx]=1;
+      while (qx.length){
+        const px=qx.pop(), py=qy.pop(); count++;
+        if(px<minX)minX=px; if(px>maxX)maxX=px;
+        if(py<minY)minY=py; if(py>maxY)maxY=py;
+        for (const [dx,dy] of NB){
+          const nx=px+dx, ny=py+dy;
+          if(nx<0||ny<0||nx>=w2||ny>=h2) continue;
+          const ni=ny*w2+nx;
+          if(ds[ni]&&!seen[ni]){ seen[ni]=1; qx.push(nx); qy.push(ny); }
+        }
+      }
+      const w=(maxX-minX+1)*2, h=(maxY-minY+1)*2;
+      if (w<minD || w>maxD) continue;
+      if (w/h<0.45 || w/h>2.2) continue;
+      cands.push({ x:(minX+maxX+1)+ox, y:(minY+maxY+1)+oy, w, mass:count });
+    }
+  }
+  return cands;
+}
+
+function BlobDetector(b, W, H){
+  const bw = b.x2 - b.x1, cx = (b.x1+b.x2)/2;
+  this.boxW = bw;
+  this.ballD = bw * 0.55;
+  this.roi = { x1:Math.max(0, Math.round(cx - bw*5.0)),
+               y1:Math.max(0, Math.round(b.y1 - bw*3.0)),
+               x2:Math.min(W, Math.round(cx + bw*5.0)),
+               y2:Math.min(H, Math.round(b.y2 + bw*2.2)) };
+  this.rw = this.roi.x2 - this.roi.x1;
+  this.rh = this.roi.y2 - this.roi.y1;
+  this.bg = null;                       // Float32Array gray background
+  this.warmupN = 150;                    // frames before trusting detections
+  this.center = { x:cx, y:(b.y1+b.y2)/2 };
+  this.last = null; this.lastT = -9; this.vel = {x:0,y:0};
+  this.mask = new Uint8Array(this.rw * this.rh);
+}
+BlobDetector.prototype.detect = function(t){
+  const {x1,y1} = this.roi, rw = this.rw, rh = this.rh;
+  const img = procCtx.getImageData(x1, y1, rw, rh).data;
+  const n = rw*rh;
+  if (!this.bg) {
+    this.bg = new Float32Array(n);
+    for (let i=0;i<n;i++){ const p=i*4;
+      this.bg[i] = 0.299*img[p]+0.587*img[p+1]+0.114*img[p+2]; }
+    return null;
+  }
+  const mask = this.mask;
+  let nMoving = 0;
+  for (let i=0;i<n;i++){
+    const p=i*4, r=img[p], g=img[p+1], bl=img[p+2];
+    const gray = 0.299*r+0.587*g+0.114*bl;
+    const moving = Math.abs(gray - this.bg[i]) > MOTION_THRESHOLD;
+    if (moving) nMoving++;
+    this.bg[i] = (1-BG_ALPHA)*this.bg[i] + BG_ALPHA*gray;
+    let ballColor = false;
+    if (moving) {
+      // exact OpenCV-style HSV test (mirrors blob_detect.py):
+      // hue <= 18 or >= 160 (red wraps), S >= 90/255, V >= 35
+      const mx = Math.max(r,g,bl), mn = Math.min(r,g,bl);
+      if (mx >= 35 && mx > 0 && (mx-mn)*255 >= 90*mx) {
+        const c = mx-mn;
+        let hDeg;
+        if (c === 0) hDeg = 0;
+        else if (mx === r) hDeg = (60*((g-bl)/c)+360)%360;
+        else if (mx === g) hDeg = 60*((bl-r)/c)+120;
+        else hDeg = 60*((r-g)/c)+240;
+        const h = hDeg/2;                // OpenCV hue 0..179
+        ballColor = h <= 18 || h >= 160;
+      }
+    }
+    mask[i] = ballColor ? 1 : 0;
+  }
+  // shake indicator (ADVISORY ONLY — never blocks; gym lighting and
+  // auto-exposure can trip motion on a perfectly still tripod)
+  this.shaking = nMoving > n * 0.60;
+  if (this.warmupN > 0){ this.warmupN--; return null; }
+  const cands = findBallCands(mask, rw, rh, this.ballD, x1, y1);
+  if (!cands.length) return null;
+
+  let best = null;
+  const age = t - this.lastT;
+  if (this.last && age <= PRED_MAX_S){
+    const pred = { x:this.last.x + this.vel.x*age,
+                   y:this.last.y + this.vel.y*age };
+    best = cands.reduce((a,c) =>
+      Math.hypot(c.x-pred.x,c.y-pred.y) < Math.hypot(a.x-pred.x,a.y-pred.y) ? c : a);
+    // no teleports: if even the closest blob contradicts the predicted
+    // motion by > 3 box-widths, it's a false blob — report nothing
+    if (Math.hypot(best.x-pred.x, best.y-pred.y) > this.boxW*3) return null;
+  }
+  if (!best)
+    best = cands.reduce((a,c) => c.mass > a.mass ? c : a);  // densest = most ball-like
+
+  if (this.last && age > 0 && age <= PRED_MAX_S)
+    this.vel = { x:(best.x-this.last.x)/age, y:(best.y-this.last.y)/age };
+  this.last = { x:best.x, y:best.y }; this.lastT = t;
+  return best;
+};
+
+// ═══ COUNTER (port of SimpleShotCounter, time-based) ═══
+function ShotCounter(b){
+  this.x1=b.x1; this.yTop=b.y1; this.x2=b.x2; this.yBot=b.y2;
+  this.boxW = b.x2-b.x1; this.ballD = this.boxW*0.55;
+  this.cx=(b.x1+b.x2)/2;
+  this.state='IDLE'; this.armedT=0; this.cooldownUntil=-1;
+  this.netHits=0; this.prev=null; this.shots=[];
+}
+ShotCounter.prototype.update = function(t, pos){
+  if (this.state==='AIRBORNE' && t-this.armedT > TIMEOUT_S){
+    this.state='IDLE'; this.cooldownUntil=t+COOLDOWN_S;
+    this.shots.push({t, verdict:'UNRESOLVED'});
+    return {verdict:'UNRESOLVED'};
+  }
+  if (!pos) return null;
+  const {x,y} = pos;
+  let out = null;
+  if (this.state==='IDLE'){
+    // strict line (validated) is unconditional; the loosened paths (slack
+    // band for flat deep shots, box entry) require rim-depth ball size so
+    // a far-away dribble crossing these image regions can't arm
+    const near = Math.abs(x-this.cx)<NEAR_X*this.boxW;
+    const w = pos.w || 0;
+    const sizeOk = w >= 0.85*this.ballD && w <= 1.5*this.ballD;
+    const movingDown = !this.prev ||
+      ((t-this.prev.t)<=PREV_MAX_S && y>=this.prev.y);
+    const strict = y < this.yTop;
+    const slackBand = y < this.yTop + ARM_SLACK*this.ballD;
+    const inBox = x>=this.x1 && x<=this.x2 && y>=this.yTop && y<=this.yBot;
+    if (t>this.cooldownUntil && near &&
+        (strict || (slackBand && sizeOk) || (inBox && movingDown && sizeOk))){
+      this.state='AIRBORNE'; this.armedT=t; this.netHits=0;
+    }
+  } else if (this.state==='AIRBORNE'){
+    const netTop = this.yTop + NET_ZONE_TOP*(this.yBot-this.yTop);
+    if (x>=this.x1 && x<=this.x2 && y>=netTop && y<=this.yBot) this.netHits++;
+        // verdict detection must be an observed CROSSING: previous point
+    // at/above the line, current below — a dribble can't resolve a shot
+    const falling = this.prev &&
+      (t-this.prev.t)<=PREV_MAX_S && (y-this.prev.y)>=FALL_MIN_PX &&
+      (y-this.prev.y) <= 45*this.boxW*(t-this.prev.t) &&   // plausible fall
+      this.prev.y <= this.yBot &&
+      Math.abs(x-this.prev.x)<=0.75*this.boxW;
+    if (y>this.yBot && y<=this.yBot+2.0*this.boxW && falling &&
+        (t-this.armedT)>=MIN_FLIGHT_S &&
+        Math.abs(x-this.cx)<NEAR_X*this.boxW){
+      const m = this.boxW*X_MARGIN;
+      let make = (this.x1+m)<x && x<(this.x2-m);
+      if (!make && this.netHits>=2 && Math.abs(x-this.cx)<=this.boxW) make = true;
+      // depth gate: crossing ball much larger than rim-depth size is a
+      // rebound flying TOWARD the camera (2D overlap, not a make)
+      if (make && pos.w && pos.w > this.ballD*DEPTH_MISS) make = false;
+      out = {verdict: make?'MAKE':'MISS', x};
+      this.shots.push({t, ...out});
+      this.state='IDLE'; this.cooldownUntil=t+COOLDOWN_S;
+    }
+  }
+  this.prev = {t,x,y};
+  return out;
+};
+
+// ═══ ORIENTATION / STREAM-SIZE CHANGES ═══
+function syncDims(){
+  if (!video || !video.videoWidth) return false;
+  if (video.videoWidth === procCanvas.width &&
+      video.videoHeight === procCanvas.height) return false;
+  // camera stream changed size (phone rotated): resize everything,
+  // and since box coordinates lived in the old frame, recalibrate.
+  procCanvas.width = video.videoWidth;  procCanvas.height = video.videoHeight;
+  viewCanvas.width = video.videoWidth;  viewCanvas.height = video.videoHeight;
+  trail.length = 0;
+  detector = null; box = null;
+  localStorage.removeItem('ht_cv_box_v1');
+  counting = false;
+  $('btn-save').classList.add('hidden');
+  $('adjust').classList.add('hidden');
+  $('calpanel').classList.add('hidden');
+  startCalibration();
+  $('status').textContent = 'Orientation changed — re-drag the box around the basket. (Your tally is kept.)';
+  return true;
+}
+
+// ═══ MAIN LOOP ═══
+const trail = [];
+function loop(){
+  const step = () => {
+    if (syncDims()){
+      if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(step);
+      else requestAnimationFrame(step);
+      return;
+    }
+    procCtx.drawImage(video, 0, 0);
+    const t = performance.now()/1000;
+    let det = null;
+    if (detector && (counting || !calibrating)) det = detector.detect(t);
+    if (det){ trail.push({x:det.x,y:det.y,t}); }
+    while (trail.length && t-trail[0].t > 0.8) trail.shift();
+
+    if (counting && counter){
+      const v = counter.update(t, det ? {x:det.x, y:det.y, w:det.w} : null);
+      if (v && v.verdict!=='UNRESOLVED'){
+        attempts++;
+        if(v.verdict==='MAKE'){ makes++; playVerdict('make'); }
+        else playVerdict('miss');
+        flash(v.verdict); renderTally();
+        canvasFlash = { v: v.verdict, t };
+      }
+    }
+    render(det);
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(step);
+    else requestAnimationFrame(step);
+  };
+  if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(step);
+  else requestAnimationFrame(step);
+}
+
+let canvasFlash = null;   // last verdict, drawn onto the canvas itself
+function render(det){
+  viewCtx.drawImage(procCanvas, 0, 0);
+  const B = box, ctx = viewCtx;
+  if (calibrating && dragStart && dragCur){
+    ctx.strokeStyle='#ffd200'; ctx.lineWidth=3;
+    ctx.strokeRect(Math.min(dragStart.x,dragCur.x), Math.min(dragStart.y,dragCur.y),
+                   Math.abs(dragCur.x-dragStart.x), Math.abs(dragCur.y-dragStart.y));
+  }
+  if (B){
+    ctx.strokeStyle='#2ecc71'; ctx.lineWidth=3;
+    ctx.strokeRect(B.x1, B.y1, B.x2-B.x1, B.y2-B.y1);
+    ctx.strokeStyle='rgba(0,220,220,.8)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(0,B.y1); ctx.lineTo(viewCanvas.width,B.y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,B.y2); ctx.lineTo(viewCanvas.width,B.y2); ctx.stroke();
+  }
+  if (calibrating && B){
+    // 3x zoom inset of the box area, for pixel-level alignment
+    const bw=B.x2-B.x1, bh=B.y2-B.y1, pad=Math.max(bw,bh)*0.5;
+    let sx=Math.max(0,B.x1-pad), sy=Math.max(0,B.y1-pad);
+    let sw=Math.min(procCanvas.width-sx, bw+2*pad);
+    let sh=Math.min(procCanvas.height-sy, bh+2*pad);
+    const dw=Math.min(viewCanvas.width*0.38, sw*3), dh=dw*sh/sw;
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(procCanvas, sx,sy,sw,sh, 10,10,dw,dh);
+    ctx.imageSmoothingEnabled=true;
+    const k=dw/sw;
+    ctx.strokeStyle='#2ecc71'; ctx.lineWidth=1.5;
+    ctx.strokeRect(10+(B.x1-sx)*k, 10+(B.y1-sy)*k, bw*k, bh*k);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+    ctx.strokeRect(10,10,dw,dh);
+  }
+  ctx.strokeStyle='#ff7a1a'; ctx.lineWidth=4; ctx.lineCap='round';
+  for (let i=1;i<trail.length;i++){
+    ctx.globalAlpha = i/trail.length;
+    ctx.beginPath(); ctx.moveTo(trail[i-1].x,trail[i-1].y);
+    ctx.lineTo(trail[i].x,trail[i].y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  if (det){ ctx.fillStyle='#ff7a1a'; ctx.beginPath();
+    ctx.arc(det.x,det.y,5,0,7); ctx.fill(); }
+
+  // HUD drawn ON the canvas so recordings carry the tally + verdicts
+  if (counting || attempts){
+    const W = viewCanvas.width;
+    ctx.font = '700 '+Math.round(W*0.030)+'px -apple-system,sans-serif';
+    ctx.textAlign = 'right'; ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.fillStyle = '#fff';
+    const s = makes+'/'+attempts+' makes';
+    ctx.strokeText(s, W-14, Math.round(W*0.035));
+    ctx.fillText(s, W-14, Math.round(W*0.035));
+    ctx.textAlign = 'left';
+  }
+  if (canvasFlash && performance.now()/1000 - canvasFlash.t < 1.2
+      && !(counter && counter.state === 'AIRBORNE')){
+    const W = viewCanvas.width;
+    ctx.font = '900 '+Math.round(W*0.075)+'px -apple-system,sans-serif';
+    ctx.textAlign = 'center'; ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(0,0,0,.8)';
+    ctx.fillStyle = canvasFlash.v==='MAKE' ? '#2ecc71' : '#e74c3c';
+    ctx.strokeText(canvasFlash.v, W/2, Math.round(W*0.10));
+    ctx.fillText(canvasFlash.v, W/2, Math.round(W*0.10));
+    ctx.textAlign = 'left';
+  }
+}
+
+function flash(v){
+  const f = $('flash');
+  f.textContent = v; f.style.color = v==='MAKE' ? 'var(--green)' : 'var(--red)';
+  f.style.opacity = 1; setTimeout(()=>f.style.opacity=0, 1200);
+}
+function renderTally(){
+  $('t-makes').textContent = makes;
+  $('t-att').textContent = attempts;
+  $('t-fg').textContent = attempts ? Math.round(makes/attempts*100)+'%' : '—';
+}
+
+// manual corrections while live
+function fix(made){ attempts++; if(made) makes++; adjustLog.push(made); renderTally(); }
+function fixUndo(){
+  if (adjustLog.length){ const m=adjustLog.pop(); attempts--; if(m) makes--; }
+  else if (attempts>0){ attempts--; if(counter&&counter.shots.length){
+    const s=counter.shots.pop(); if(s.verdict==='MAKE') makes--; } }
+  renderTally();
+}
+
+// ═══ SAVE → same history HoopTrainer reads ═══
+$('btn-save').onclick = () => {
+  if (!attempts){ $('status').textContent='No shots recorded yet.'; return; }
+  const now = new Date();
+  const sess = {
+    id: Date.now(),
+    date: now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    time: now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
+    workout: 'CV Live Session',
+    makes, att: attempts, fg: Math.round(makes/attempts*100),
+    zones: [{label:'CV Live', makes, att:attempts,
+             fg: Math.round(makes/attempts*100)}]
+  };
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('ht_history')||'[]'); } catch(e){}
+  h.unshift(sess);
+  localStorage.setItem('ht_history', JSON.stringify(h));
+  $('status').textContent = `Saved ${makes}/${attempts} to History ✔ — open the app to see it.`;
+  makes = 0; attempts = 0; adjustLog = [];
+  if (counter) counter.shots = [];
+  renderTally();
+  $('btn-save').classList.add('hidden');
+  $('adjust').classList.add('hidden');
+  $('btn-go').classList.remove('hidden');
+  counting = false;
+};
+</script>
+</body>
+</html>
