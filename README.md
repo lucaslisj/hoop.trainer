@@ -97,7 +97,8 @@ With this project I wanted to emphasize portability and ease of use. Many of the
 - Shots that are short or miss off the front rim sometimes are falsely registered as a make. This is because the area directly in front of the rim and the interior of the rim share the same area from a 2D top of the key view. I've tried mitigating this with a depth check, ie. that if the ball is detected in that area but is larger than expected, a make will be downgraded to a miss, but this is still a key limitation as a result of this camera angle
 - 3 pointers can have inconsistent trajectory tracking due to (plausibly, not entirely sure yet) the higher velocity of the ball
 - Missed shots that do not reach a sufficient height threshold are occasionally not detected as shot attempts (ie. the "idle -> airborne" transition is not made). I am currently trying to fix this issue by finding the ideal height threshold for what counts as a "shot"
-- Airballs that graze the net without touching the rim are currently falsely flagged as makes. 
+- Airballs that graze the net without touching the rim are currently falsely flagged as makes.
+- Webport UI could be optimized to make calibration of the rectangle around the rim easier
 
 
 ## Tech ⚙️
