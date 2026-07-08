@@ -2,8 +2,6 @@
 
 > A single-camera computer vision app that tracks basketball makes and misses in real time — from your phone, in the browser, no extra hardware.
 
-<!-- Optional: drop a GIF or screenshot of the annotated video here once you have one.
-     A short clip of the MAKE/MISS flash + trajectory trail sells the whole project in 3 seconds. -->
 
 ---
 <img width="800" height="450" alt="demo_gif" src="https://github.com/user-attachments/assets/49e86179-946d-45ac-8b1e-d1bcdee28b4b" />
@@ -77,8 +75,6 @@ The second is a ball-size (depth) check to catch short misses that bounce back t
 
 ## Design decisions 🛠️
 
-<!-- This section is the most important one — it's the part that shows judgment, not just code.
-     Write these as "I chose X over Y because Z." Real reasoning from real problems you hit. -->
 
 **Blob detector over YOLO.** 📐
 
@@ -88,7 +84,7 @@ The blob detector approach utilizes a rule-based deterministic approach to track
 
 **Camera Angle.** 📷
 
-I decided to go with a "top of they key" viewpoint for the tripod. This gives the clearest signal and an easy 2D mapping for shots that go in, as the hoop is dead straight on. Shots fly along the camera axis so (most) misses read cleanly left or right. 
+I decided to go with a "top of the key" viewpoint for the tripod. This gives the clearest signal and an easy 2D mapping for shots that go in, as the hoop is dead straight on. Shots fly along the camera axis so (most) misses read cleanly left or right. 
 
 **Single camera, phone-first.** 📱
 
