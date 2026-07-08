@@ -11,7 +11,7 @@
 
 ## How to run ❗
 
-hooptrainerv2.netlify.app
+[hooptrainerv2.netlify.app](https://hooptrainerv2.netlify.app)
 
 
 
@@ -23,7 +23,7 @@ Visit this link on your phone, click the "live" icon near the top of the screen 
 
 ## What it does 🎥 
 
-Simply prop your phone on a tripod, place it on the basketball court, and start letting it fly! This web application will track your makes and misses in real time, utilizing simple computer vision techniques to track the the ball and its trajectory.
+Simply prop your phone on a tripod, place it on the basketball court, and start letting it fly! This web application will track your makes and misses in real time, utilizing simple computer vision techniques to track the ball and its trajectory.
 
 ---
 
@@ -49,7 +49,7 @@ Occasionally, there might be more than one surviving candidate. This can be caus
 
 **Make/miss logic —** 🧠
 
-To determine whether or not a shot is successful or not, we utilize a simple two state system. From the specific camera angle we use (top of the key, facing directly towards the basket) this becomes a 2D coordinate problem. We first map out the relevant parts of the rim with a rectangular box (done by the user when calibrating the setup to ensure maximum accuracy)
+To determine whether or not a shot is successful or not, we utilize a simple two state system. From the specific camera angle we use (camera placed at the top of the key, facing directly towards the basket) this becomes a 2D coordinate problem. We first map out the relevant parts of the rim with a rectangular box (done by the user when calibrating the setup to ensure maximum accuracy)
 
 <img width="580" height="531" alt="Screenshot 2026-07-07 at 7 22 17 PM" src="https://github.com/user-attachments/assets/b0389c61-48e9-4f2a-bca4-ef18c68d2b93" />
 
@@ -82,7 +82,7 @@ The second is a ball-size (depth) check to catch short misses that bounce back t
 
 **Blob detector over YOLO.** 📐
 
-I started with a YOLO based approach for the 'eye' (ball detection) using a COCO pretrained model. The results weren't great when I backtested against my own shootaround clips. Specifically, the COCO model loses significant accuracy in its tracking when the ball gets close to the rim, often losing track of the ball completely. COCO only has a generic "sports ball" category and does not filter specifically to basketball so it may not be specialized for a basketball at that distance and lighting. Moreover, YOLO's neural net inference takes an approach which is inconsistent across hardware; the same backtest on the same video clip on my local hardware and different sandboxed environments returned different results, specifically for the edge cases including near misses and shots that swivel in the net. In addition, a neural network based YOLO based approach generally has higher processing time than a determinitic alternative which could slow down processing speeds and thus reduce the feasibility of porting it into a HTML based web app running in real time.
+I started with a YOLO based approach for the 'eye' (ball detection) using a COCO pretrained model. The results weren't great when I backtested against my own shootaround clips. Specifically, the COCO model loses significant accuracy in its tracking when the ball gets close to the rim, often losing track of the ball completely. COCO only has a generic "sports ball" category and does not filter specifically to basketball so it may not be specialized for a basketball at that distance and lighting. Moreover, YOLO's neural net inference takes an approach which is inconsistent across hardware; the same backtest on the same video clip on my local hardware and different sandboxed environments returned different results, specifically for the edge cases including near misses and shots that swivel in the net. In addition, a neural network based YOLO based approach generally has higher processing time than a deterministic alternative which could slow down processing speeds and thus reduce the feasibility of porting it into a HTML based web app running in real time.
 
 The blob detector approach utilizes a rule-based deterministic approach to track the ball that is consistent across hardware. This ensures that any debugging or tuning of the logic would have consistent results on the same video clip no matter the device is it played on. Pixel colors and grayscale values will be the same no matter the device you run the program on. Given more time and resources I will try refining a YOLO based approach starting with just running successful backtests on a computer but I imagine it would be harder to port to a real time web based app.
 
@@ -112,6 +112,6 @@ Python + OpenCV for native computer backtesting, with an equivalent HTML impleme
 
 ## Notes 📝
 
-This project was inspired by the Homecourt App and also the release of Claude Fable 5. Built with AI assistance (Claude Fable 5) for implementation, with the architechture, design, detector choice, and validation driven by me.
+This project was inspired by the Homecourt App and also the release of Claude Fable 5. Built with AI assistance (Claude Fable 5) for implementation, with the architecture, design, detector choice, and validation driven by me.
 
 Btw go Sixers (Maxey the GOAT)
