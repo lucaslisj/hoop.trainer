@@ -4,7 +4,7 @@
 
 
 ---
-<img width="800" height="450" alt="demo_gif" src="https://github.com/user-attachments/assets/49e86179-946d-45ac-8b1e-d1bcdee28b4b" />
+<img width="800" height="450" alt="demo_gif" src="./assets/demo_gif.gif" />
 
 
 ## How to run ❗
