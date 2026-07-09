@@ -15,7 +15,7 @@
 
 Visit this link on your phone, click the "live" icon near the top of the screen and follow instructions from there for camera positioning and setup.
 
-<img width="511" height="762" alt="Screenshot 2026-07-07 at 7 56 14 PM" src="https://github.com/user-attachments/assets/5b16f5c3-e077-4b02-a0a2-877274af796b" />
+<img width="511" height="762" alt="Screenshot 2026-07-07 at 7 56 14 PM" src="./assets/hooptrainerapp.png" />
 
 ---
 
@@ -42,30 +42,30 @@ We then infer that the overlap between these two arrays (flagged in both the mot
 Occasionally, there might be more than one surviving candidate. This can be caused by the backboard reflecting the ball, skin tones, or maroon colored backgrounds somehow interfering. To resolve ambiguity we keep a running record of the ball's last known position and approximate velocity. We can thus use linear extrapolation to approximate the current position of the ball from its last known position, and we pick the blob that is closest to this approximation and reject candidates that would require the blob to teleport across long distances. If there are no surviving candidates, then we do not report a detection for the current frame, as a missed frame is recoverable (maybe next frame is clearer and the ball gets detected) but a false verdict is not.
 
 
-<img width="800" height="450" alt="visualization_demo" src="https://github.com/user-attachments/assets/318451e7-28d2-4bb4-a118-22c12580bdd1" />
+<img width="800" height="450" alt="visualization_demo" src="./assets/visualization_demo.gif" />
 
 
 **Make/miss logic —** 🧠
 
 To determine whether or not a shot is successful or not, we utilize a simple two state system. From the specific camera angle we use (camera placed at the top of the key, facing directly towards the basket) this becomes a 2D coordinate problem. We first map out the relevant parts of the rim with a rectangular box (done by the user when calibrating the setup to ensure maximum accuracy)
 
-<img width="580" height="531" alt="Screenshot 2026-07-07 at 7 22 17 PM" src="https://github.com/user-attachments/assets/b0389c61-48e9-4f2a-bca4-ef18c68d2b93" />
+<img width="580" height="531" alt="Screenshot 2026-07-07 at 7 22 17 PM" src="./assets/rim.png" />
 
 
 The program starts in an "idle" waiting state, watching for the ball to rise above (or close to) the rim. When it does, the program switches to an "airborne" state and it then waits for the ball to reappear below the net. If the ball comes down inside the rim's horizontal range, the shot is registered as a make. 
 
-<img width="800" height="450" alt="make_demo" src="https://github.com/user-attachments/assets/0d30d63e-509f-4d9c-b27f-2a3a9b80bc2c" />
+<img width="800" height="450" alt="make_demo" src="./assets/make_demo.gif" />
 
 
 If it comes down outside the horizontal region, it is deemed a miss. 
 
 
-<img width="800" height="450" alt="miss_demo" src="https://github.com/user-attachments/assets/23293311-0ef0-46a4-83a0-27253fd4a5c5" />
+<img width="800" height="450" alt="miss_demo" src="./assets/miss_demo.gif" />
 
 
 Two extra checks are used to help refine this algorithm. The first is a net-contact signal that rescues the make when the shot rattles inside and is kicked out sideways. In the shot below, the shot spends significant time in contact with the net (within rectanglular box) and has a downward trajectory, so even if the shot falls slightly outside the horizontal range we count it as a make. Shots that land outside without spending much time in the box/don't have a clear downward trajectory are not saved by this check. (the UI looks slightly different as this is in the original Python backtester and not the HTML port although they are designed to be logically equivalent).
 
-<img width="800" height="450" alt="swivel_demo" src="https://github.com/user-attachments/assets/3ecf8a77-8c0a-4b8a-b6f8-c984a95c3ce1" />
+<img width="800" height="450" alt="swivel_demo" src="./assets/swivel_demo.gif" />
 
 
 The second is a ball-size (depth) check to catch short misses that bounce back towards the camera. If the ball appears too large, even if it shows up in the horizontal band of the net, it will be revoked to a "miss"
